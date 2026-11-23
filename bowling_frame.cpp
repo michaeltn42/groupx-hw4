@@ -86,7 +86,9 @@ void Bowling_Frame::update_scores()
 		}
 		else if (!roll_three_ && (strike_ || spare_))
 		{
-			score3_ = dist10(rng);
+			const int pins_remaining = strike_ && score2_ < 10 ? 10 - score2_ : 10;
+			std::uniform_int_distribution<std::mt19937::result_type> distRemaining(0, pins_remaining);
+			score3_ = distRemaining(rng);
 			roll_three_ = true;
 		}
 	}

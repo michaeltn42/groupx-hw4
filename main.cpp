@@ -22,7 +22,7 @@ int main(int argc, char * argv[])
 {
 	if (argc != 2)
 	{
-		cout << "Error: Please pass exactly one command-line argument for the number of players." << endl;
+		cout << "Usage: " << argv[0] << " <num_players>" << endl;
 		return 1;
 	}
 
@@ -37,6 +37,7 @@ int main(int argc, char * argv[])
 	}
 
 	Bowling_Frame ** players = new Bowling_Frame*[player_count];
+	cout << "Player count is: " << player_count << endl;
 
 	for (int player = 0; player < player_count; ++player)
 	{
@@ -71,15 +72,16 @@ int main(int argc, char * argv[])
 		frame = players[player];
 		while (frame)
 		{
-			cout << "  Frame " << frame->frame_num()
-			     << ": Roll 1 = " << frame->score1()
-			     << ", Roll 2 = " << frame->score2();
-			if (frame->frame_num() == 10)
-				cout << ", Roll 3 = " << frame->score3();
-			cout << ", Frame Score = " << frame->frame_score() << endl;
+			cout << "Frame " << frame->frame_num() << ":\n"
+			     << "  Score 1: " << frame->score1() << '\n'
+			     << "  Score 2: " << frame->score2() << '\n';
+			if (frame->frame_num() == 10 && (frame->strike() || frame->spare()))
+				cout << "  Score 3: " << frame->score3() << '\n';
+			cout << "  Frame Score: " << frame->frame_score() << endl;
 			frame = frame->next_frame();
 		}
-		cout << "  Game Total = " << current_game_total(players[player]) << endl;
+		cout << "Total Game Score for player " << player + 1 << ": "
+		     << current_game_total(players[player]) << endl;
 	}
 
 	for (int player = 0; player < player_count; ++player)
