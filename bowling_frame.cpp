@@ -8,8 +8,12 @@ Bowling_Frame::Bowling_Frame(int fnum)
 {
 	score1_ = 0;
 	score2_ = 0;
+	score3_ = 0;
 	strike_ = false;
 	spare_ = false;
+	roll_one_ = false;
+	roll_two_ = false;
+	roll_three_ = false;
 	frame_num_ = fnum;
 	frame_score_ = 0;
 
@@ -20,8 +24,6 @@ Bowling_Frame::Bowling_Frame(int fnum)
 
 Bowling_Frame::~Bowling_Frame()
 {
-	free(next_frame_);
-	free(prev_frame_);
 }
 
 Bowling_Frame* Bowling_Frame::next_frame() { return next_frame_; }
@@ -31,10 +33,13 @@ Bowling_Frame* Bowling_Frame::prev_frame() { return prev_frame_; }
 void Bowling_Frame::prev_frame( Bowling_Frame * new_frame ) { prev_frame_ = new_frame; }
 
 int Bowling_Frame::score1()				{ return score1_; }
-void Bowling_Frame::score1( int score )	{ score1_ = score; }
+void Bowling_Frame::score1( int score )	{ score1_ = score; roll_one_ = true; strike_ = (score == 10); }
 
 int Bowling_Frame::score2()				{ return score2_; }
-void Bowling_Frame::score2( int score )	{ score2_ = score; }
+void Bowling_Frame::score2( int score )	{ score2_ = score; roll_two_ = true; spare_ = (!strike_ && score1_ + score2_ == 10); }
+
+int Bowling_Frame::score3()				{ return score3_; }
+void Bowling_Frame::score3( int score )	{ score3_ = score; roll_three_ = true; }
 
 bool Bowling_Frame::strike() 			{ return strike_; }
 void Bowling_Frame::strike(bool value )	{ strike_ = value; }
@@ -61,19 +66,83 @@ void Bowling_Frame::update_scores()
 		score1_ = dist10(rng);
 		roll_one_ = true;
 
-		if(score1_ == 10) strike_ = true; 
+		strike_ = (score1_ == 10);
 	}
-	else if ( !strike_ && !roll_two_ ) 	
+	else if (frame_num_ == 10)
 	{
-		std::uniform_int_distribution<std::mt19937::result_type> distX(0,10 - score1_);
-		score2_ = distX(rng); 
-		roll_two_ = true;
-
-		if ((score1_ + score2_) == 10) spare_ = true;
+		if (!roll_two_)
+		{
+			if (score1_ == 10)
+			{
+				score2_ = dist10(rng);
+			}
+			else
+			{
+				std::uniform_int_distribution<std::mt19937::result_type> distRemaining(0, 10 - score1_);
+				score2_ = distRemaining(rng);
+			}
+			roll_two_ = true;
+			spare_ = (!strike_ && score1_ + score2_ == 10);
+		}
+		else if (!roll_three_ && (strike_ || spare_))
+		{
+			score3_ = dist10(rng);
+			roll_three_ = true;
+		}
 	}
-	else if (next_frame_) 	next_frame_->update_scores();
+	else if (!strike_ && !roll_two_)
+	{
+		std::uniform_int_distribution<std::mt19937::result_type> distRemaining(0, 10 - score1_);
+		score2_ = distRemaining(rng);
+		roll_two_ = true;
+		spare_ = (score1_ + score2_ == 10);
+	}
 
-	frame_score_ = score1_ + score2_;
+	Bowling_Frame * head = this;
+	while (head->prev_frame_)
+		head = head->prev_frame_;
+
+	Bowling_Frame * frame = head;
+	while (frame)
+	{
+		if (frame->frame_num_ == 10)
+		{
+			frame->frame_score_ = frame->score1_ + frame->score2_ + frame->score3_;
+		}
+		else if (frame->strike_)
+		{
+			Bowling_Frame * next = frame->next_frame_;
+			int bonus = 0;
+			if (next)
+			{
+				bonus += next->score1_;
+				if (next->strike_)
+				{
+					Bowling_Frame * afterNext = next->next_frame_;
+					if (afterNext)
+						bonus += afterNext->score1_;
+					else
+						bonus += next->score2_;
+				}
+				else
+				{
+					bonus += next->score2_;
+				}
+			}
+			frame->frame_score_ = 10 + bonus;
+		}
+		else if (frame->spare_)
+		{
+			frame->frame_score_ = 10;
+			if (frame->next_frame_)
+				frame->frame_score_ += frame->next_frame_->score1_;
+		}
+		else
+		{
+			frame->frame_score_ = frame->score1_ + frame->score2_;
+		}
+		frame = frame->next_frame_;
+	}
 }
 
 

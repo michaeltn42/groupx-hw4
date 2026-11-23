@@ -1,14 +1,17 @@
 CC=g++
 DEPS = bowling_frame.h
+TARGET = bowling
 
-all: bowling_frame.o main.o
-	$(CC) -std=c++11 bowling_frame.o main.o
+all: $(TARGET)
 
-bowling: bowling_frame.o $(DEPS)
-	$(CC) -c -std=c++11 bowling_frame.cpp
+$(TARGET): bowling_frame.o main.o
+	$(CC) -std=c++11 bowling_frame.o main.o -o $(TARGET)
 
-main: main.o $(DEPS)
-	$(CC) -c -std=c++11 main.cpp
+bowling_frame.o: bowling_frame.cpp $(DEPS)
+	$(CC) -std=c++11 -c bowling_frame.cpp
+
+main.o: main.cpp $(DEPS)
+	$(CC) -std=c++11 -c main.cpp
 
 clean: 
-	rm *.o *.out
+	rm -f *.o *.out $(TARGET)

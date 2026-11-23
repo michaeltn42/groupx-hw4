@@ -1,17 +1,15 @@
 #include <iostream>
 #include "bowling_frame.h"
-#include <random>
+#include <cstdlib>
+#include <cerrno>
+#include <limits>
 
 using namespace std;
-
-std::random_device dev_main;
-std::mt19937 rng_main(dev_main());
 
 int current_game_total(Bowling_Frame * first_frame)
 {
 	Bowling_Frame * temp = first_frame;
 	int game_total = 0;
-	int temp_total = 0;
 	while(temp)
 	{
 		game_total += temp->frame_score();
@@ -20,58 +18,81 @@ int current_game_total(Bowling_Frame * first_frame)
 	return game_total;	
 }
 
-int main()
+int main(int argc, char * argv[])
 {
-	//make frames
-	Bowling_Frame * f1 = new Bowling_Frame(1);
-	Bowling_Frame * f2 = new Bowling_Frame(2);
-	Bowling_Frame * f3 = new Bowling_Frame(3);
-
-	//link frames together
-	f1->next_frame(f2);
-
-	f2->next_frame(f3);
-	f2->prev_frame(f1);
-
-	f3->prev_frame(f2);	
-
-	//set frame scores	
-	f1->update_scores();
-	f1->update_scores();
-	cout << "Frame 1 Total: " << current_game_total(f1) << endl;
-
-	f1->update_scores();
-	f1->update_scores();
-	cout << "Frame 1 and 2 Total: " << current_game_total(f1) << endl;
-
-
-	f1->update_scores();
-	f1->update_scores();
-	cout << "Frame 1,2,and 3 Total: " << current_game_total(f1) << endl;
-
-	//print values
-	cout << "Frame " << f1->frame_num() << ": " << endl
-		 << " Score 1: " << f1->score1() << endl
-		 << " Score 2: " << f1->score2() << endl;
-
-	cout << "Frame " << f2->frame_num() << ": " << endl
-	     << " Score 1: " << f2->score1() << endl
-		 << " Score 2: " << f2->score2() << endl;
-
-	cout << "Frame " << f3->frame_num() << ": " << endl
-	     << " Score 1: " << f3->score1() << endl
-		 << " Score 2: " << f3->score2() << endl;
-
-	//iterate through linked list and print values
-	Bowling_Frame * traverse = f1;
-	
-	while(traverse)
+	if (argc != 2)
 	{
-		cout << "Frame " << traverse->frame_num() << ": " << endl
-		 	 << " Score 1: " << traverse->score1() << endl
-		 	 << " Score 2: " << traverse->score2() << endl;
-
-		traverse = traverse->next_frame();
+		cout << "Error: Please pass exactly one command-line argument for the number of players." << endl;
+		return 1;
 	}
 
+	char * end = NULL;
+	errno = 0;
+	long player_count = strtol(argv[1], &end, 10);
+	if (errno != 0 || end == argv[1] || *end != '\0' || player_count <= 0 ||
+		player_count > numeric_limits<int>::max())
+	{
+		cout << "Error: The number of players must be a positive integer." << endl;
+		return 1;
+	}
+
+	Bowling_Frame ** players = new Bowling_Frame*[player_count];
+
+	for (int player = 0; player < player_count; ++player)
+	{
+		players[player] = NULL;
+		Bowling_Frame * previous = NULL;
+
+		for (int frame_number = 1; frame_number <= 10; ++frame_number)
+		{
+			Bowling_Frame * frame = new Bowling_Frame(frame_number);
+			if (frame_number == 1)
+				players[player] = frame;
+			if (previous)
+			{
+				previous->next_frame(frame);
+				frame->prev_frame(previous);
+			}
+			previous = frame;
+		}
+
+		Bowling_Frame * frame = players[player];
+		while (frame)
+		{
+			frame->update_scores();
+			frame->update_scores();
+			if (frame->frame_num() == 10 && (frame->strike() || frame->spare()))
+				frame->update_scores();
+
+			frame = frame->next_frame();
+		}
+
+		cout << "Player " << player + 1 << endl;
+		frame = players[player];
+		while (frame)
+		{
+			cout << "  Frame " << frame->frame_num()
+			     << ": Roll 1 = " << frame->score1()
+			     << ", Roll 2 = " << frame->score2();
+			if (frame->frame_num() == 10)
+				cout << ", Roll 3 = " << frame->score3();
+			cout << ", Frame Score = " << frame->frame_score() << endl;
+			frame = frame->next_frame();
+		}
+		cout << "  Game Total = " << current_game_total(players[player]) << endl;
+	}
+
+	for (int player = 0; player < player_count; ++player)
+	{
+		Bowling_Frame * frame = players[player];
+		while (frame)
+		{
+			Bowling_Frame * next = frame->next_frame();
+			delete frame;
+			frame = next;
+		}
+	}
+	delete[] players;
+
+	return 0;
 }
